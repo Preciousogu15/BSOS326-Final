@@ -1,0 +1,30 @@
+import pandas as pd
+import numpy as np
+import seaborn as sns
+import matplotlib.pyplot as plt
+import statsmodels.api as sm
+import statsmodels.formula.api as smf
+
+df = pd.read_csv('goodreads_books.csv')
+model = smf.ols('num_ratings ~ avg_rating', data=df).fit()
+print(model.summary())
+
+# Create the plot
+plt.figure(figsize=(10, 6))
+
+# Scatter plot of the actual data points
+sns.scatterplot(x='avg_rating', y='num_ratings', data=df, alpha=0.5, label='Data points')
+
+# Plot the regression line
+x_values = np.linspace(df['avg_rating'].min(), df['avg_rating'].max(), 100)
+y_values = model.params[0] + model.params[1] * x_values
+plt.plot(x_values, y_values, color='red', label='Regression line')
+
+# Add labels and title
+plt.xlabel('Average Rating')
+plt.ylabel('Number of Ratings')
+plt.title('Linear Regression: Number of Ratings vs Average Rating')
+plt.legend()
+
+# Show the plot
+plt.show()
