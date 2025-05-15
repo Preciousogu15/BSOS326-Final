@@ -1,0 +1,14 @@
+import pandas as pd
+
+# Load your data
+df = pd.read_csv('goodreads_books.csv')
+
+# Basic stats
+print(df[['avg_rating', 'num_ratings']].describe())
+
+# Top 5 highest rated vs. most popular
+print("\nHighest Rated:")
+print(df.sort_values('avg_rating', ascending=False).head(5)[['title', 'avg_rating']])
+
+print("\nMost Popular:")
+print(df.sort_values('num_ratings', ascending=False).head(5)[['title', 'num_ratings']])
