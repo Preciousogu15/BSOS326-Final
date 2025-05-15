@@ -18,7 +18,6 @@ This project explores whether a book’s average user rating on Goodreads is rel
 ### Data Preparation
 
 * Cleaned and standardized ratings and popularity counts
-* Removed duplicates and incomplete entries to ensure data quality
 * Prepared data for exploratory analysis and regression modeling
 
 ## Analysis Approach
