@@ -1,0 +1,101 @@
+import requests
+from bs4 import BeautifulSoup
+import pandas as pd
+import time
+import re
+
+
+headers = {'User-Agent': 'Mozilla/5.0'}
+book_data = []
+
+for page in range(1, 3):
+    print(f"Scraping page {page}...")
+    url = f"https://www.goodreads.com/list/show/1.Best_Books_Ever?page={page}"
+    response = requests.get(url, headers=headers)
+
+    # Check if request was successful
+    if response.status_code != 200:
+        print(f"Failed to fetch page {page}")
+        continue
+
+    soup = BeautifulSoup(response.content, "html.parser")
+
+    # Get all books from the page
+    books = soup.find_all("tr", {"itemtype": "http://schema.org/Book"})
+
+    print(f"Found {len(books)} books on page {page}")
+
+    for book in books:
+        try:
+            # Title of the book
+            title_tag = book.find("a", class_="bookTitle")
+            if not title_tag:
+                continue
+            title = title_tag.get_text(strip=True)
+            book_url = "https://www.goodreads.com" + title_tag["href"]
+
+            # Author
+            author_tag = book.find("a", class_="authorName")
+            author = author_tag.get_text(strip=True) if author_tag else "Unknown"
+
+            # Ratings info
+            rating_tag = book.find("span", class_="minirating")
+            if rating_tag:
+                rating_text = rating_tag.get_text(strip=True)
+                # Extract average rating (4.30 avg rating)
+                avg_rating_match = re.search(r"(\d+\.\d+)", rating_text)
+                avg_rating = float(avg_rating_match.group(1)) if avg_rating_match else None
+
+                # Extract number of ratings (1,234,567 ratings)
+                ratings_count_match = re.search(r"([\d,]+)\s+ratings", rating_text)
+                if ratings_count_match:
+                    num_ratings = int(ratings_count_match.group(1).replace(",", ""))
+                else:
+                    num_ratings = None
+            else:
+                avg_rating = None
+                num_ratings = None
+
+            # Collect book entry
+            book_entry = {
+                "title": title,
+                "author": author,
+                "avg_rating": avg_rating,
+                "num_ratings": num_ratings,
+                "pub_year": None,
+                "url": book_url
+            }
+
+            try:
+                book_resp = requests.get(book_url, headers=headers)
+                if book_resp.status_code == 200:
+                    book_soup = BeautifulSoup(book_resp.content, "html.parser")
+                    pub_info = book_soup.find("p", {"data-testid": "publicationInfo"})
+                    if pub_info:
+                        match = re.search(r"Published\s+.*?(\d{4})", pub_info.get_text())
+                        if match:
+                            book_entry["pub_year"] = int(match.group(1))
+            except Exception as e:
+                print(f"Could not get pub year for {title}: {e}")
+
+            book_data.append(book_entry)
+            print(f"Added: {title} by {author}")
+            time.sleep(1)  # Be polite with delays
+
+        except Exception as e:
+            print(f"Error parsing book: {e}")
+            continue
+
+if book_data:
+    df = pd.DataFrame(book_data)
+    # Reorder columns for better readability
+    df = df[['title', 'author', 'pub_year', 'avg_rating', 'num_ratings', 'url']]
+
+    csv_filename = "goodreads_books.csv"
+    df.to_csv(csv_filename, index=False)
+    print(f"\nSuccessfully saved {len(book_data)} books to {csv_filename}")
+
+    print("\nSample of the collected data:")
+    print(df.head())
+else:
+    print("No data was collected.")
